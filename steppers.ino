@@ -1,8 +1,5 @@
 /*
 
-
-test4a.ino
-
 Demonstrates .run() in a function - move()
 move until a sensor value is seen - move_to_sensor1()
 
