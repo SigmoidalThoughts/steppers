@@ -82,7 +82,7 @@ void loop()
 
   motorsOff();
 
-  pingDist=pingAve1(3);
+  pingDist=pingAve1(2);
 
     if (pingDist > 20)
     {
@@ -92,9 +92,13 @@ void loop()
     {
       moveDist = 0;
     }
-    else if (pingDist < 10)
+    else if (pingDist < 10 && pingDist >0)
     {
       moveDist = -10 * FullStepSize; // back up 10 cm
+    }
+    else if (pingDist < 0)
+    {
+      moveDist = 10;  // wall out of range
     }
 
   //moveDist = pingDist * FullStepSize;
@@ -107,7 +111,7 @@ void loop()
 
   move();
 //  move_to_sensor1(15, 100);
-//  delay(1000);
+  delay(1000);
 
 }
 
