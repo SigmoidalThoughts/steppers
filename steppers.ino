@@ -11,7 +11,7 @@ stepper motor control
 #include <AccelStepper.h>
 #include <NewPing.h>
 
-const int MAX=200; // max sonar range
+const int MaxSonar=100; // max sonar range in cm
 const int MotorEnable=13; // pin to enable/disable easystepper
 
 //
@@ -36,9 +36,9 @@ AccelStepper stepperR(1, 5, DirRpin);
 //
 // ultrasonic sensors
 //
-#define TRIGGER1 30
-#define ECHO1 31
-NewPing sonar1(TRIGGER1,ECHO1, MAX);
+#define TRIGGER1 30  // sonar sensor 1
+#define ECHO1 31     // sonar sensor 1
+NewPing sonar1(TRIGGER1,ECHO1, MaxSonar);
 
 //
 // values to control EasyDriver 
@@ -78,7 +78,7 @@ void loop()
   stepperL.setCurrentPosition(0) ;  //wherever we are now is zero
   stepperR.setCurrentPosition(0) ;  //wherever we are now is zero
 
-  motorsOff();
+  motorsOff(); // save power until we know where we want to move
 
   pingDist=pingAve1(2);
 
@@ -90,16 +90,10 @@ void loop()
     {
       moveDist = 0;
     }
-    else if (pingDist < 10 && pingDist >0)
+    else if (pingDist < 10 ) 
     {
       moveDist = -10 * FullStepSize; // back up 10 cm
     }
-    else if (pingDist < 0)
-    {
-      moveDist = 10;  // wall out of range
-    }
-
-  //moveDist = pingDist * FullStepSize;
 
   destL(maxspeed,moveDist,1);
   destR(maxspeed/5,moveDist,1);
@@ -108,7 +102,9 @@ void loop()
   Serial.print(pingDist); Serial.print(" Moving: ");  Serial.println(moveDist);
 
   move();
-//  move_to_sensor1(15, 100);
+
+ // move_to_sensor1(10, 50); //has problems
+
   delay(1000);
 
 }
@@ -160,12 +156,14 @@ void move(){
 //
 int move_to_sensor1(int stopdist, int movedist){
 
-int pingdist;
-int togoL;
-int togoR;
+  int pingdist;
+  int togoL;
+  int togoR;
 
-togoL = stepperL.distanceToGo();
-togoR = stepperR.distanceToGo();
+  togoL = stepperL.distanceToGo();
+  togoR = stepperR.distanceToGo();
+
+  motorsOn();
 
   while (togoL != 0 || togoR != 0) {
 
@@ -174,12 +172,13 @@ togoR = stepperR.distanceToGo();
     if (pingdist>stopdist) {
 //      stepperL.moveTo(stepperL.currentPosition()+movedist);;
 //      stepperR.moveTo(stepperR.currentPosition()+movedist);;
-      stepperL.moveTo(stepperL.currentPosition()+1);;
-      stepperR.moveTo(stepperR.currentPosition()+1);;
+      stepperL.moveTo(stepperL.currentPosition()+movedist);;
+      stepperR.moveTo(stepperR.currentPosition()+movedist);;
     }
     stepperL.run();
     stepperR.run();
   }
+  motorsOff();
   return(0);
 }
 
@@ -189,22 +188,25 @@ togoR = stepperR.distanceToGo();
 int pingAve1(int num) {
 
   int dist=0;
-  int distAve=0;
+  int distTot=0;
   int count=0;
-  int ret;
+  int distAve;
 
   for (int x=0; x < num; x++) {
     dist = sonar1.ping()/US_ROUNDTRIP_CM;
+
     if (dist > 0) {
-      distAve+=dist;
+      distTot+=dist;
+      count += 1;
+
+    } else if (dist <= 0) {  // deal with things on the edge of MaxSonar range
+      distTot+=MaxSonar;
       count += 1;
     }
     delayMicroseconds(5000); // min time between pings or they jam each other
   }
-  ret = distAve/count;
-//  Serial.print("PingAve1 returns: ");
-//  Serial.println(ret); 
-  return(ret);
+  distAve = distTot/count;
+  return(distAve);
 }
 
 //
